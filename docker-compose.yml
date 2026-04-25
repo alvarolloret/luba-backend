@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PROJECT_NAME: ${PROJECT_NAME}
+      ENVIRONMENT: ${ENVIRONMENT}
+      SECRET_KEY: ${SECRET_KEY}
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD}
+      POSTGRES_SERVER: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
+      FRONTEND_HOST: ${FRONTEND_HOST}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./alembic.ini:/app/alembic.ini
+      - ./scripts:/app/scripts
+
+volumes:
+  db-data:
